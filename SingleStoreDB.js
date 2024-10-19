@@ -1,4 +1,4 @@
-const mysql = require('mysql2/promise');
+import { createPool } from 'mysql2/promise';
 require('dotenv').config();
 
 const HOST = process.env.DB_HOST || "PASTE YOUR SINGLESTORE ADMIN ENDPOINT HERE";
@@ -10,7 +10,7 @@ const PORT = process.env.DB_PORT || "8080";
 // Define a class to manage the connection pool and database operations
 class SingleStoreDB {
     constructor() {
-        this.pool = mysql.createPool({
+        this.pool = createPool({
             host: HOST,
             port: PORT,
             user: USER,
@@ -100,4 +100,4 @@ class SingleStoreDB {
 }
 
 // Export a singleton instance of the class
-module.exports = new SingleStoreDB();
+export default new SingleStoreDB();
