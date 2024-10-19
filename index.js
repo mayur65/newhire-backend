@@ -1,13 +1,13 @@
 
 // Importing necessary packages
-import express from 'express';
-import { json } from 'body-parser';
-import cors from 'cors';
-import { v4 as uuidv4 } from 'uuid';
-import { createInterview, createInterviewRecord, readOne, readOneRecord } from './SingleStoreDB'; // Use require for the initialized instance
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const { v4: uuidv4 } = require('uuid');
+const singleStoreDB = require('./SingleStoreDB'); // Use require for the initialized instance
 
 const app = express();
-app.use(json());
+app.use(bodyParser.json());
 app.use(cors());
 
 app.post('/questions', async (req, res) => {
@@ -21,7 +21,7 @@ app.post('/questions', async (req, res) => {
 
     const key = uuidv4();
     try {
-        await createInterview({
+        await singleStoreDB.createInterview({
             data: {
                 id: key,
                 name: name,
@@ -50,7 +50,7 @@ app.post('/interviewRecord', async (req, res) => {
     const key = uuidv4(); // Generate a unique key (UUID)
     try {
         // Store the interview record into the database
-        await createInterviewRecord({
+        await singleStoreDB.createInterviewRecord({
             data: {
                 id: key, // Unique identifier for the interview
                 interview_record: JSON.stringify(interviewRecord) // Store the interviewRecord as JSON
@@ -66,7 +66,7 @@ app.post('/interviewRecord', async (req, res) => {
 
 app.get('/questions/:id', async (req, res) => {
     try {
-        const question = await readOne({ id: req.params.id });
+        const question = await singleStoreDB.readOne({ id: req.params.id });
         if (question) {
             res.json(question);
         } else {
@@ -81,7 +81,7 @@ app.get('/questions/:id', async (req, res) => {
 
 app.get('/interviewRecords/:id', async (req, res) => {
     try {
-        const question = await readOneRecord({ id: req.params.id });
+        const question = await singleStoreDB.readOneRecord({ id: req.params.id });
         if (question) {
             res.json(question);
         } else {
@@ -93,7 +93,7 @@ app.get('/interviewRecords/:id', async (req, res) => {
     }
 });
 
-// endpoint to get interview result with groq 
+// endpoint to get interview result with groq
 
 // Start the server
 const PORT = process.env.PORT || 3001;

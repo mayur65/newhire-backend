@@ -1,7 +1,7 @@
-import Groq from "groq-sdk";
+import Groq from 'groq-sdk';
 
 
-class Groq {
+class GroqImpl {
     constructor(job_desc, transcript) {
         this.groq = new Groq({ apiKey: process.env.GROQ_KEY })
         this.job_desc = job_desc
