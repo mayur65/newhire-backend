@@ -215,12 +215,13 @@ app.post('/closest-embeddings', async (req, res) => {
 
 app.post('/closest-embeddings-to-ideal', async (req, res) => {
     try {
-        const { collectionName } = req.body;
+        const { company, role } = req.body;
 
         if (!collectionName) {
             return res.status(400).json({ error: 'Please provide a collection name.' });
         }
 
+        const collectionName = `${company}_${role}`.toLowerCase().replace(/\s+/g, '_');
         const closestDocuments = await chromaEmbeddingService.findClosestToIdeal(collectionName);
 
         const documentIds = closestDocuments.map(doc => doc.id);
