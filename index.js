@@ -30,7 +30,7 @@ app.post('/questions', async (req, res) => {
     const key = uuidv4();
     const collectionName = `${company}_${role}`.toLowerCase().replace(/\s+/g, '_');
     try {
-        await singleStoreDB.updateData({
+        await singleStoreDB.createInterview({
             data: {
                 id: key,
                 name: name,
@@ -65,7 +65,7 @@ app.post('/interviewRecord', async (req, res) => {
     console.log("saving interview")
     try {
         // Store the interview record into the database
-        await singleStoreDB.createInterviewRecord({
+        await singleStoreDB.updateData({
             data: {
                 uid: uid, // Unique identifier for the interview
                 interview_record: JSON.stringify(interviewRecord), // Store the interviewRecord as JSON
@@ -79,6 +79,20 @@ app.post('/interviewRecord', async (req, res) => {
         res.status(500).json({ message: 'Error inserting interview record' });
     }
 });
+
+app.get('/all', async(req,res) => {
+    try {
+        const response = await singleStoreDB.getAll();
+        if (response) {
+            res.json(response);
+        } else {
+            res.status(404).send('Interview record not found');
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        res.status(500).send('Error fetching question');
+    }
+})
 
 app.get('/questions/:uid', async (req, res) => {
     try {

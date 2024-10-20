@@ -27,22 +27,39 @@ class SingleStoreDB {
         return this.pool.getConnection();
     }
 
-    // Function to update data into the database
-    async updateData({ data }) {
+    // Function to insert data into the database
+    async createInterview({ data }) {
         const conn = await this.getConnection();
         try {
             const query = `
-            UPDATE data SET name=? role=? company=? job_description=? linkedin_profile=? github_profile=? questions=? WHERE id = ?
+            INSERT INTO data (id, name, role, company, job_description, questions)
+            VALUES (?, ?, ?, ?, ?, ?)
         `;
             // Inserting the new fields into the database
             await conn.query(query, [
+                data.id,
                 data.name,
                 data.role,
                 data.company,
                 data.job_description,
                 data.linkedin_profile,
                 data.github_profile,
-                data.questions,
+                data.questions
+            ]);
+        } finally {
+            conn.release();
+        }
+    }
+
+    async updateData({ data }) {
+        const conn = await this.getConnection();
+        try {
+            const query = `
+            UPDATE data SET interview_record=? WHERE id = ?
+        `;
+            // Inserting the new fields into the database
+            await conn.query(query, [
+                data.interview_record,
                 data.id
             ]);
         } finally {
@@ -50,21 +67,17 @@ class SingleStoreDB {
         }
     }
 
-    async createInterviewRecord({ data }) {
+    async getAll() {
         const conn = await this.getConnection();
         try {
             const query = `
-            INSERT INTO interviewRecords (id, interview_record, expressions)
-            VALUES (?, ?, ?)
+            SELECT * FROM data
         `;
             // Inserting the new fields into the database
-            await conn.query(query, [
-                data.uid,
-                data.interview_record,
-                data.expressions
-            ]);
+            const [rows] = await conn.query(query);
+            return rows
         } finally {
-            conn.release(); // Release the connection back to the pool
+            conn.release();
         }
     }
 
