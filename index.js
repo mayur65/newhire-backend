@@ -30,7 +30,7 @@ app.post('/questions', async (req, res) => {
     const key = uuidv4();
     const collectionName = `${company}_${role}`.toLowerCase().replace(/\s+/g, '_');
     try {
-        await singleStoreDB.createInterview({
+        await singleStoreDB.updateData({
             data: {
                 id: key,
                 name: name,

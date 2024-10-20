@@ -27,24 +27,23 @@ class SingleStoreDB {
         return this.pool.getConnection();
     }
 
-    // Function to insert data into the database
-    async createInterview({ data }) {
+    // Function to update data into the database
+    async updateData({ data }) {
         const conn = await this.getConnection();
         try {
             const query = `
-            INSERT INTO data (id, name, role, company, job_description, questions)
-            VALUES (?, ?, ?, ?, ?, ?)
+            UPDATE data SET name=? role=? company=? job_description=? linkedin_profile=? github_profile=? questions=? WHERE id = ?
         `;
             // Inserting the new fields into the database
             await conn.query(query, [
-                data.id,
                 data.name,
                 data.role,
                 data.company,
                 data.job_description,
                 data.linkedin_profile,
                 data.github_profile,
-                data.questions
+                data.questions,
+                data.id
             ]);
         } finally {
             conn.release();
