@@ -6,6 +6,7 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const singleStoreDB = require('./SingleStoreDB'); // Use require for the initialized instance
 const GroqClient = require('./groqClient'); // Use require instead of import
+const ChromaEmbeddingService = require('./ChromaEmbeddingService')
 
 const app = express();
 app.use(bodyParser.json());
@@ -94,7 +95,6 @@ app.get('/interviewRecords/:id', async (req, res) => {
     }
 });
 
-const groqClient = new GroqClient(process.env.GROQ_API_KEY);
 
 app.post('/api/generate-description', async (req, res) => {
     const { jobDescription } = req.body;
@@ -114,6 +114,45 @@ app.post('/api/generate-description', async (req, res) => {
     } catch (error) {
         console.error("Error generating description:", error);
         res.status(500).json({ message: 'Server error' });
+    }
+});
+
+const chromaEmbeddingService = new ChromaEmbeddingService(process.env.GOOGLE_API_KEY);
+
+app.post("/generate-embeddings", async (req, res) => {
+    try {
+        const { document, collectionName } = req.body; // Extract document and collectionName from the request body
+
+        if (!document || !collectionName) {
+            return res.status(400).send({ error: "Document and collectionName are required" });
+        }
+
+        const documentParts = document.split(/\n+/); // Split by new lines as an example, adjust as needed
+        const queryResult = await chromaEmbeddingService.runEmbeddingProcess(documentParts, collectionName);
+
+        res.status(200).send({ message: "Embeddings generated and stored successfully", result: queryResult });
+    } catch (error) {
+        res.status(500).send({ error: "An error occurred while generating embeddings" });
+    }
+});
+
+app.post('/closest-embeddings', async (req, res) => {
+    try {
+        const { texts, collectionName } = req.body;
+
+        if (!texts || !Array.isArray(texts) || texts.length === 0) {
+            return res.status(400).json({ error: 'Please provide a valid list of texts.' });
+        }
+
+        if (!collectionName) {
+            return res.status(400).json({ error: 'Please provide a collection name.' });
+        }
+
+        const closestDocuments = await chromaEmbeddingService.findClosestDocuments(texts, collectionName);
+        res.json({ closestDocuments });
+    } catch (error) {
+        console.error('Error finding closest embeddings:', error);
+        res.status(500).json({ error: 'An error occurred while finding the closest embeddings.' });
     }
 });
 
