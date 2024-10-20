@@ -13,7 +13,6 @@ app.use(bodyParser.json());
 app.use(cors());
 
 const groqClient = new GroqClient(process.env.GROQ_API_KEY);
-const chromaEmbeddingService = new ChromaEmbeddingService(process.env.GOOGLE_API_KEY);
 
 function zeroUUIDv4() {
     return '00000000-0000-0000-0000-000000000000';
@@ -52,33 +51,38 @@ app.post('/questions', async (req, res) => {
     }
 });
 
+// Stores the interview and transcript
 app.post('/interviewRecord', async (req, res) => {
-    const { id, interviewRecord } = req.body;
+    const { uid, interviewRecord, expressions } = req.body;
+    console.log(uid)
+    console.log(interviewRecord)
+    console.log(expressions)
 
     // Check if interviewRecord is provided
-    if (!id || !interviewRecord || !Array.isArray(interviewRecord) || interviewRecord.length === 0) {
+    if (!uid || !interviewRecord || !expressions || !Array.isArray(interviewRecord) || interviewRecord.length === 0) {
         return res.status(400).json({ message: 'Invalid input, interviewRecord is required and should be a non-empty array.' });
     }
-
+    console.log("saving interview")
     try {
         // Store the interview record into the database
         await singleStoreDB.createInterviewRecord({
             data: {
-                id: id, // Unique identifier for the interview
-                interview_record: JSON.stringify(interviewRecord) // Store the interviewRecord as JSON
+                uid: uid, // Unique identifier for the interview
+                interview_record: JSON.stringify(interviewRecord), // Store the interviewRecord as JSON
+                expressions: JSON.stringify(expressions)
             }
         });
 
-        res.status(201).json({ message: 'Interview record inserted successfully', id: key });
+        res.status(201).json({ message: 'Interview record inserted successfully', uid: uid });
     } catch (err) {
         console.error('Error:', err);
         res.status(500).json({ message: 'Error inserting interview record' });
     }
 });
 
-app.get('/questions/:id', async (req, res) => {
+app.get('/questions/:uid', async (req, res) => {
     try {
-        const question = await singleStoreDB.readOne({ id: req.params.id });
+        const question = await singleStoreDB.readOne({ id: req.params.uid });
         if (question) {
             res.json(question);
         } else {
@@ -90,10 +94,9 @@ app.get('/questions/:id', async (req, res) => {
     }
 });
 
-
-app.get('/interviewRecords/:id', async (req, res) => {
+app.get('/interviewRecords/:uid', async (req, res) => {
     try {
-        const question = await singleStoreDB.readOneRecord({ id: req.params.id });
+        const question = await singleStoreDB.readOneRecord({ id: req.params.uid });
         if (question) {
             res.json(question);
         } else {
@@ -129,6 +132,29 @@ app.post('/api/generate-description', async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 });
+
+app.get('/api/generate-insights', async (req, res) => {
+    const { uid } = req.body
+    if (! await readOne({ uid })) {
+        res.status(500).json({
+            message: "UID does not exist"
+        })
+    } else {
+        const { job_description } = await singleStoreDB.readOne({ uid })
+        const { transcript } = await singleStoreDB.readOneRecord({ uid })
+
+        console.log(uid)
+        console.log(transcript)
+        console.log(job_description)
+    }
+    
+})
+
+
+
+// CHROMA
+
+const chromaEmbeddingService = new ChromaEmbeddingService(process.env.GOOGLE_API_KEY);
 
 app.post("/generate-embeddings", async (req, res) => {
     try {

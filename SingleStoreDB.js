@@ -42,6 +42,8 @@ class SingleStoreDB {
                 data.role,
                 data.company,
                 data.job_description,
+                data.linkedin_profile,
+                data.github_profile,
                 data.questions
             ]);
         } finally {
@@ -53,13 +55,14 @@ class SingleStoreDB {
         const conn = await this.getConnection();
         try {
             const query = `
-            INSERT INTO interviewRecords (id, interview_record)
-            VALUES (?, ?)
+            INSERT INTO interviewRecords (id, interview_record, expressions)
+            VALUES (?, ?, ?)
         `;
             // Inserting the new fields into the database
             await conn.query(query, [
-                data.id,
-                data.interview_record
+                data.uid,
+                data.interview_record,
+                data.expressions
             ]);
         } finally {
             conn.release(); // Release the connection back to the pool
