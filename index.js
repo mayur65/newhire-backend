@@ -22,6 +22,7 @@ app.post('/questions', async (req, res) => {
     const questionsValue = questions.join(", ");
 
     const key = uuidv4();
+    const collectionName = `${company}_${role}`.toLowerCase().replace(/\s+/g, '_');
     try {
         await singleStoreDB.createInterview({
             data: {
@@ -32,7 +33,8 @@ app.post('/questions', async (req, res) => {
                 linkedin_profile: linkedinProfile,
                 github_profile: githubProfile,
                 job_description: jobDescription,
-                questions: questionsValue  // Storing the questions as a single string
+                questions: questionsValue,  // Storing the questions as a single string
+                collection_name: collectionName
             }
         });
 
