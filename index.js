@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const singleStoreDB = require('./SingleStoreDB'); // Use require for the initialized instance
+const GroqClient = require('./groqClient'); // Use require instead of import
 
 const app = express();
 app.use(bodyParser.json());
@@ -93,7 +94,30 @@ app.get('/interviewRecords/:id', async (req, res) => {
     }
 });
 
-// endpoint to get interview result with groq
+const groqClient = new GroqClient(process.env.GROQ_API_KEY);
+
+app.post('/api/generate-description', async (req, res) => {
+    const { jobDescription } = req.body;
+
+    if (!jobDescription) {
+        return res.status(400).json({ message: 'Job description is required' });
+    }
+
+    try {
+        const profile = await groqClient.generateCandidateProfile(jobDescription);
+
+        if (!profile) {
+            return res.status(500).json({ message: 'Failed to generate description' });
+        }
+
+        res.status(200).json({ description: profile });
+    } catch (error) {
+        console.error("Error generating description:", error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+
 
 // Start the server
 const PORT = process.env.PORT || 3001;
