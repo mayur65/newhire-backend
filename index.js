@@ -42,19 +42,18 @@ app.post('/questions', async (req, res) => {
 });
 
 app.post('/interviewRecord', async (req, res) => {
-    const { interviewRecord } = req.body;
+    const { id, interviewRecord } = req.body;
 
     // Check if interviewRecord is provided
-    if (!interviewRecord || !Array.isArray(interviewRecord) || interviewRecord.length === 0) {
+    if (!id || !interviewRecord || !Array.isArray(interviewRecord) || interviewRecord.length === 0) {
         return res.status(400).json({ message: 'Invalid input, interviewRecord is required and should be a non-empty array.' });
     }
 
-    const key = uuidv4(); // Generate a unique key (UUID)
     try {
         // Store the interview record into the database
         await singleStoreDB.createInterviewRecord({
             data: {
-                id: key, // Unique identifier for the interview
+                id: id, // Unique identifier for the interview
                 interview_record: JSON.stringify(interviewRecord) // Store the interviewRecord as JSON
             }
         });
