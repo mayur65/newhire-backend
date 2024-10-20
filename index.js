@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const singleStoreDB = require('./SingleStoreDB'); // Use require for the initialized instance
-const GroqClient = require('./groqClient'); // Use require instead of import
+const GroqClient = require('./GroqClient'); // Use require instead of import
 const ChromaEmbeddingService = require('./ChromaEmbeddingService')
 
 const app = express();
