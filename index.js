@@ -13,9 +13,9 @@ app.use(bodyParser.json());
 app.use(cors());
 
 app.post('/questions', async (req, res) => {
-    const { name, role, company, jobDescription, questions } = req.body;
+    const { name, role, company, jobDescription, linkedinProfile, githubProfile, questions } = req.body;
 
-    if (!name || !role || !company || !jobDescription || !Array.isArray(questions) || questions.length === 0) {
+    if (!name || !role || !company || !jobDescription || !linkedinProfile || !githubProfile) {
         return res.status(400).json({ message: 'Invalid input, all fields (name, role, company, jobDescription, questions) are required.' });
     }
 
@@ -29,6 +29,8 @@ app.post('/questions', async (req, res) => {
                 name: name,
                 role: role,
                 company: company,
+                linkedin_profile: linkedinProfile,
+                github_profile: githubProfile,
                 job_description: jobDescription,
                 questions: questionsValue  // Storing the questions as a single string
             }
