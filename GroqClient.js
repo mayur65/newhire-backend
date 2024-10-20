@@ -25,7 +25,7 @@ class GroqClient {
         }
     }
 
-    async generateCandidateProfile(jobDescription, model = "llama3-8b-8192") {
+    async generateCandidateProfile(jobDescription, company, model = "llama3-8b-8192") {
         const prompt = `
             Based on the following job description, generate a detailed profile of the ideal candidate.
             The profile should include the following sections:

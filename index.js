@@ -94,22 +94,27 @@ app.get('/interviewRecords/:id', async (req, res) => {
     }
 });
 
+const groqClient = new GroqClient(process.env.GROQ_API_KEY);
 
 app.post('/api/generate-description', async (req, res) => {
-    const { jobDescription } = req.body;
+    const { jobDescription, company } = req.body;
 
     if (!jobDescription) {
         return res.status(400).json({ message: 'Job description is required' });
     }
 
     try {
-        const profile = await groqClient.generateCandidateProfile(jobDescription);
+        const profile = await groqClient.generateCandidateProfile(jobDescription, company);
 
         if (!profile) {
             return res.status(500).json({ message: 'Failed to generate description' });
         }
 
-        res.status(200).json({ description: profile });
+        const collectionName = "000";
+        const result = await chromaEmbeddingService.runEmbeddingProcess([profile], collectionName);
+
+        res.status(200).json({ description: profile, embeddingResult: result });
+
     } catch (error) {
         console.error("Error generating description:", error);
         res.status(500).json({ message: 'Server error' });
