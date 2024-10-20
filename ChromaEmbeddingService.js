@@ -38,7 +38,7 @@ class ChromaEmbeddingService {
         return await this.chromaClient.listCollections();
     }
 
-    async runEmbeddingProcess(texts, collectionName) {
+    async runEmbeddingProcess(texts, collectionName, id) {
         const existingCollections = await this.listCollections();
         const collectionExists = existingCollections.some(
             (col) => col.name === collectionName
@@ -58,7 +58,7 @@ class ChromaEmbeddingService {
         const aggregatedEmbeddings = this.averageEmbeddings(embeddings);
 
         const uuid = uuidv4();
-        await this.addDocuments(collection, [uuid], aggregatedEmbeddings);
+        await this.addDocuments(collection, [id], aggregatedEmbeddings);
 
         return uuid;
     }
@@ -86,6 +86,45 @@ class ChromaEmbeddingService {
 
         return queryResult;
     }
+
+    async findClosestToIdeal(collectionName) {
+        const existingCollections = await this.listCollections();
+        const collectionExists = existingCollections.some(
+            (col) => col.name === collectionName
+        );
+
+        if (!collectionExists) {
+            throw new Error(`Collection with name ${collectionName} does not exist.`);
+        }
+
+        const collection = await this.chromaClient.getCollection({
+            name: collectionName,
+            embeddingFunction: this.embedder,
+        });
+
+        const idealDocument = await collection.get({
+            ids: ["00000000-0000-0000-0000-000000000000"],
+        });
+
+        if (!idealDocument || idealDocument.embeddings.length === 0) {
+            throw new Error('Ideal document embedding not found.');
+        }
+
+        const idealEmbedding = idealDocument.embeddings[0];
+
+        const queryResult = await this.queryCollection(collection, idealEmbedding, Number.MAX_SAFE_INTEGER)
+
+        const sortedResults = queryResult.distances
+            .map((distance, index) => ({
+                id: queryResult.ids[index],
+                document: queryResult.documents[index],
+                distance: distance
+            }))
+            .sort((a, b) => a.distance - b.distance);
+
+        return sortedResults;
+    }
+
 
 
     averageEmbeddings(embeddings) {

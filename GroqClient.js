@@ -25,7 +25,7 @@ class GroqClient {
         }
     }
 
-    async generateCandidateProfile(jobDescription, company, model = "llama3-8b-8192") {
+    async generateCandidateProfile(jobDescription, company, role, model = "llama3-8b-8192") {
         const prompt = `
             Based on the following job description, generate a detailed profile of the ideal candidate.
             The profile should include the following sections:
@@ -37,6 +37,8 @@ class GroqClient {
             5. **Cultural Fit**: Traits that align with the company's culture and values.
             
             Job Description: ${jobDescription}
+            Company: ${jobDescription}
+            Role: ${role}
         `;
 
         return this.getChatCompletion(prompt, model);

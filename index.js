@@ -12,6 +12,13 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
+const groqClient = new GroqClient(process.env.GROQ_API_KEY);
+const chromaEmbeddingService = new ChromaEmbeddingService(process.env.GOOGLE_API_KEY);
+
+function zeroUUIDv4() {
+    return '00000000-0000-0000-0000-000000000000';
+}
+
 app.post('/questions', async (req, res) => {
     const { name, role, company, jobDescription, linkedinProfile, githubProfile, questions } = req.body;
 
@@ -98,24 +105,22 @@ app.get('/interviewRecords/:id', async (req, res) => {
     }
 });
 
-const groqClient = new GroqClient(process.env.GROQ_API_KEY);
-
 app.post('/api/generate-description', async (req, res) => {
-    const { jobDescription, company } = req.body;
+    const { jobDescription, company, role } = req.body;
 
     if (!jobDescription) {
         return res.status(400).json({ message: 'Job description is required' });
     }
 
     try {
-        const profile = await groqClient.generateCandidateProfile(jobDescription, company);
+        const profile = await groqClient.generateCandidateProfile(jobDescription, company, role);
 
         if (!profile) {
             return res.status(500).json({ message: 'Failed to generate description' });
         }
 
-        const collectionName = "000";
-        const result = await chromaEmbeddingService.runEmbeddingProcess([profile], collectionName);
+        const collectionName = `${company}_${role}`.toLowerCase().replace(/\s+/g, '_');
+        const result = await chromaEmbeddingService.runEmbeddingProcess([profile], collectionName, zeroUUIDv4());
 
         res.status(200).json({ description: profile, embeddingResult: result });
 
@@ -125,18 +130,26 @@ app.post('/api/generate-description', async (req, res) => {
     }
 });
 
-const chromaEmbeddingService = new ChromaEmbeddingService(process.env.GOOGLE_API_KEY);
-
 app.post("/generate-embeddings", async (req, res) => {
     try {
-        const { document, collectionName } = req.body; // Extract document and collectionName from the request body
+        const { id, document } = req.body; // Extract document and collectionName from the request body
 
-        if (!document || !collectionName) {
+        if (!document || !id) {
             return res.status(400).send({ error: "Document and collectionName are required" });
         }
 
-        const documentParts = document.split(/\n+/); // Split by new lines as an example, adjust as needed
-        const queryResult = await chromaEmbeddingService.runEmbeddingProcess(documentParts, collectionName);
+        const data = await singleStoreDB.readOne({ id });
+
+        if (!data || !data.company || !data.role) {
+            return res.status(404).send({ error: "No matching record found for the given ID" });
+        }
+
+        const { company, role } = data;
+
+        const documentParts = document.split(/\n+/);
+
+        const collectionName = `${company}_${role}`.toLowerCase().replace(/\s+/g, '_');
+        const queryResult = await chromaEmbeddingService.runEmbeddingProcess(documentParts, collectionName, id);
 
         res.status(200).send({ message: "Embeddings generated and stored successfully", result: queryResult });
     } catch (error) {
@@ -158,6 +171,40 @@ app.post('/closest-embeddings', async (req, res) => {
 
         const closestDocuments = await chromaEmbeddingService.findClosestDocuments(texts, collectionName);
         res.json({ closestDocuments });
+    } catch (error) {
+        console.error('Error finding closest embeddings:', error);
+        res.status(500).json({ error: 'An error occurred while finding the closest embeddings.' });
+    }
+});
+
+app.post('/closest-embeddings-to-ideal', async (req, res) => {
+    try {
+        const { collectionName } = req.body;
+
+        if (!collectionName) {
+            return res.status(400).json({ error: 'Please provide a collection name.' });
+        }
+
+        const closestDocuments = await chromaEmbeddingService.findClosestToIdeal(collectionName);
+
+        const documentIds = closestDocuments.map(doc => doc.id);
+
+        const fullDocuments = [];
+        for (const id of documentIds) {
+            const documentData = await singleStoreDB.readOne({ id });
+            if (documentData) {
+                fullDocuments.push({
+                    id: documentData.id,
+                    name: documentData.name,
+                    company: documentData.company,
+                    role: documentData.role,
+                    linkedin_profile: documentData.linkedin_profile,
+                    github_profile: documentData.github_profile,
+                    interview_feedback: documentData.interview_feedback
+                });
+            }
+        }
+        res.json({ documents: fullDocuments });
     } catch (error) {
         console.error('Error finding closest embeddings:', error);
         res.status(500).json({ error: 'An error occurred while finding the closest embeddings.' });
