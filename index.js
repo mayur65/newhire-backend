@@ -31,8 +31,8 @@ app.post('/questions', async (req, res) => {
     const key = uuidv4();
     const collectionName = `${company}_${role}`.toLowerCase().replace(/\s+/g, '_');
     try {
-
-        const existingCollection = await singleStoreDB.readOne({ collection_name: collectionName });
+        console.log(collectionName)
+        // const existingCollection = await singleStoreDB.readOneUsingCollection({ collectionName: collectionName });
 
         await singleStoreDB.createInterview({
             data: {
@@ -44,22 +44,22 @@ app.post('/questions', async (req, res) => {
                 github_profile: githubProfile,
                 job_description: jobDescription,
                 questions: questionsValue,  // Storing the questions as a single string
-                collection_name: collectionName
+                // collection_name: collectionName
             }
         });
 
         res.status(201).json({ message: 'Data inserted successfully', id: key });
 
-        if (!existingCollection) {
-            await axios.post('http://localhost:3001/api/generate-description', {
-                jobDescription: jobDescription,
-                company: company
-            }).then(response => {
-                console.log(`Ideal embeddings for ${collectionName} generated successfully.`);
-            }).catch(error => {
-                console.error(`Error generating ideal embeddings for ${collectionName}:`, error);
-            });
-        }
+        // if (!existingCollection) {
+        //     await axios.post('http://localhost:3001/api/generate-description', {
+        //         jobDescription: jobDescription,
+        //         company: company
+        //     }).then(response => {
+        //         console.log(`Ideal embeddings for ${collectionName} generated successfully.`);
+        //     }).catch(error => {
+        //         console.error(`Error generating ideal embeddings for ${collectionName}:`, error);
+        //     });
+        // }
 
     } catch (err) {
         console.error('Error:', err);
@@ -163,8 +163,6 @@ app.get('/api/generate-insights', async (req, res) => {
 
 
 // CHROMA
-
-const chromaEmbeddingService = new ChromaEmbeddingService(process.env.GOOGLE_API_KEY);
 
 app.post("/generate-embeddings", async (req, res) => {
     try {
