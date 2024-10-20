@@ -13,6 +13,7 @@ app.use(bodyParser.json());
 app.use(cors());
 
 const groqClient = new GroqClient(process.env.GROQ_API_KEY);
+const chromaEmbeddingService = new ChromaEmbeddingService(process.env.GOOGLE_API_KEY);
 
 function zeroUUIDv4() {
     return '00000000-0000-0000-0000-000000000000';
@@ -30,6 +31,9 @@ app.post('/questions', async (req, res) => {
     const key = uuidv4();
     const collectionName = `${company}_${role}`.toLowerCase().replace(/\s+/g, '_');
     try {
+
+        const existingCollection = await singleStoreDB.readOne({ collection_name: collectionName });
+
         await singleStoreDB.createInterview({
             data: {
                 id: key,
@@ -45,26 +49,32 @@ app.post('/questions', async (req, res) => {
         });
 
         res.status(201).json({ message: 'Data inserted successfully', id: key });
+
+        if (!existingCollection) {
+            await axios.post('http://localhost:3001/api/generate-description', {
+                jobDescription: jobDescription,
+                company: company
+            }).then(response => {
+                console.log(`Ideal embeddings for ${collectionName} generated successfully.`);
+            }).catch(error => {
+                console.error(`Error generating ideal embeddings for ${collectionName}:`, error);
+            });
+        }
+
     } catch (err) {
         console.error('Error:', err);
         res.status(500).json({ message: 'Error inserting data' });
     }
 });
 
-// Stores the interview and transcript
 app.post('/interviewRecord', async (req, res) => {
-    const { uid, interviewRecord, expressions } = req.body;
-    console.log(uid)
-    console.log(interviewRecord)
-    console.log(expressions)
+    const { id, interviewRecord } = req.body;
 
-    // Check if interviewRecord is provided
     if (!uid || !interviewRecord || !expressions || !Array.isArray(interviewRecord) || interviewRecord.length === 0) {
         return res.status(400).json({ message: 'Invalid input, interviewRecord is required and should be a non-empty array.' });
     }
-    console.log("saving interview")
+
     try {
-        // Store the interview record into the database
         await singleStoreDB.createInterviewRecord({
             data: {
                 uid: uid, // Unique identifier for the interview
@@ -108,7 +118,7 @@ app.get('/interviewRecords/:uid', async (req, res) => {
     }
 });
 
-app.post('/api/generate-description', async (req, res) => {
+app.post('/generate-description', async (req, res) => {
     const { jobDescription, company, role } = req.body;
 
     if (!jobDescription) {
@@ -147,7 +157,7 @@ app.get('/api/generate-insights', async (req, res) => {
         console.log(transcript)
         console.log(job_description)
     }
-    
+
 })
 
 
