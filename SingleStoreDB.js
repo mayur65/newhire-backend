@@ -42,8 +42,6 @@ class SingleStoreDB {
                 data.role,
                 data.company,
                 data.job_description,
-                data.linkedin_profile,
-                data.github_profile,
                 data.questions
             ]);
         } finally {
@@ -55,14 +53,12 @@ class SingleStoreDB {
         const conn = await this.getConnection();
         try {
             const query = `
-            INSERT INTO interviewRecords (id, interview_record, expressions)
-            VALUES (?, ?, ?)
-        `;
+            UPDATE data SET interview_record=?
+            WHERE id=?`;
             // Inserting the new fields into the database
             await conn.query(query, [
-                data.uid,
                 data.interview_record,
-                data.expressions
+                data.uid,
             ]);
         } finally {
             conn.release(); // Release the connection back to the pool
@@ -83,6 +79,17 @@ class SingleStoreDB {
         const conn = await this.getConnection();
         try {
             const [rows] = await conn.execute("SELECT * FROM interviewRecords WHERE id = ?", [id]);
+            return rows[0];
+        } finally {
+            conn.release();
+        }
+    }
+
+    async readOneUsingCollection({ collection }) {
+        console.log(collection)
+        const conn = await this.getConnection();
+        try {
+            const [rows] = await conn.execute("SELECT * FROM data WHERE collection_name = ?", [collection]);
             return rows[0];
         } finally {
             conn.release();

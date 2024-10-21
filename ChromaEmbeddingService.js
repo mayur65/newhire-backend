@@ -43,7 +43,6 @@ class ChromaEmbeddingService {
         const collectionExists = existingCollections.some(
             (col) => col.name === collectionName
         );
-
         let collection;
         if (collectionExists) {
             collection = await this.chromaClient.getCollection({
@@ -52,15 +51,14 @@ class ChromaEmbeddingService {
             });
         } else {
             collection = await this.createCollection(collectionName);
+            console.log('Created collection : ' + collection)
         }
 
         const embeddings = await this.embedder.generate(texts);
         const aggregatedEmbeddings = this.averageEmbeddings(embeddings);
-
-        const uuid = uuidv4();
         await this.addDocuments(collection, [id], aggregatedEmbeddings);
 
-        return uuid;
+        return id;
     }
 
     async findClosestDocuments(texts, collectionName) {

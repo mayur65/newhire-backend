@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const singleStoreDB = require('./SingleStoreDB'); // Use require for the initialized instance
 const GroqClient = require('./GroqClient'); // Use require instead of import
 const ChromaEmbeddingService = require('./ChromaEmbeddingService')
+const axios = require("axios");
 
 const app = express();
 app.use(bodyParser.json());
@@ -31,9 +32,7 @@ app.post('/questions', async (req, res) => {
     const key = uuidv4();
     const collectionName = `${company}_${role}`.toLowerCase().replace(/\s+/g, '_');
     try {
-        console.log(collectionName)
-        // const existingCollection = await singleStoreDB.readOneUsingCollection({ collectionName: collectionName });
-
+        const existingCollection = await singleStoreDB.readOneUsingCollection({ collection: collectionName });
         await singleStoreDB.createInterview({
             data: {
                 id: key,
@@ -44,22 +43,23 @@ app.post('/questions', async (req, res) => {
                 github_profile: githubProfile,
                 job_description: jobDescription,
                 questions: questionsValue,  // Storing the questions as a single string
-                // collection_name: collectionName
+                collection_name: collectionName
             }
         });
 
         res.status(201).json({ message: 'Data inserted successfully', id: key });
 
-        // if (!existingCollection) {
-        //     await axios.post('http://localhost:3001/api/generate-description', {
-        //         jobDescription: jobDescription,
-        //         company: company
-        //     }).then(response => {
-        //         console.log(`Ideal embeddings for ${collectionName} generated successfully.`);
-        //     }).catch(error => {
-        //         console.error(`Error generating ideal embeddings for ${collectionName}:`, error);
-        //     });
-        // }
+        if (!existingCollection) {
+            await axios.post('http://localhost:3001/generate-description', {
+                jobDescription: jobDescription,
+                company: company,
+                role: role
+            }).then(response => {
+                console.log(`Ideal embeddings for ${collectionName} generate successfully called.`);
+            }).catch(error => {
+                console.error(`Error generating ideal embeddings for ${collectionName}:`, error);
+            });
+        }
 
     } catch (err) {
         console.error('Error:', err);
@@ -68,9 +68,9 @@ app.post('/questions', async (req, res) => {
 });
 
 app.post('/interviewRecord', async (req, res) => {
-    const { id, interviewRecord } = req.body;
+    const { uid, interviewRecord } = req.body;
 
-    if (!uid || !interviewRecord || !expressions || !Array.isArray(interviewRecord) || interviewRecord.length === 0) {
+    if (!uid || !interviewRecord || !Array.isArray(interviewRecord) || interviewRecord.length === 0) {
         return res.status(400).json({ message: 'Invalid input, interviewRecord is required and should be a non-empty array.' });
     }
 
@@ -78,12 +78,21 @@ app.post('/interviewRecord', async (req, res) => {
         await singleStoreDB.createInterviewRecord({
             data: {
                 uid: uid, // Unique identifier for the interview
-                interview_record: JSON.stringify(interviewRecord), // Store the interviewRecord as JSON
-                expressions: JSON.stringify(expressions)
+                interview_record: JSON.stringify(interviewRecord) // Store the interviewRecord as JSON
             }
         });
 
         res.status(201).json({ message: 'Interview record inserted successfully', uid: uid });
+
+        await axios.post('http://localhost:3001/generate-embeddings', {
+            id: uid,
+            document: JSON.stringify(interviewRecord)
+        }).then(response => {
+            console.log(`Embeddings generate successfully called.`);
+        }).catch(error => {
+            console.error(`Error generating ideal embeddings`, error);
+        });
+
     } catch (err) {
         console.error('Error:', err);
         res.status(500).json({ message: 'Error inserting interview record' });
@@ -127,7 +136,7 @@ app.post('/generate-description', async (req, res) => {
 
     try {
         const profile = await groqClient.generateCandidateProfile(jobDescription, company, role);
-
+        console.log(profile)
         if (!profile) {
             return res.status(500).json({ message: 'Failed to generate description' });
         }
@@ -215,7 +224,7 @@ app.post('/closest-embeddings-to-ideal', async (req, res) => {
     try {
         const { company, role } = req.body;
 
-        if (!collectionName) {
+        if (!company || !role) {
             return res.status(400).json({ error: 'Please provide a collection name.' });
         }
 
