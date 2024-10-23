@@ -1,3 +1,5 @@
+# Backend service for Hire_New (AI simulated interviews for employers) [Cal Hacks 2024]
+
 This repository contains the backend service developed for the Hire_New Application that my team build as part of Cal Hacks 2024.
 
 The product that we worked on was designed to be AI-simulated interviews conducted from the perspective of employers. The employer would begin by filling out a short form providing relevant details of the interview like -
